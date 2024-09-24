@@ -1,11 +1,11 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import numpy as np
 import pandas as pd
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import tensorflow as tf
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Dense
 import os
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 
@@ -38,35 +38,31 @@ x_test_scaled = scaler.transform(x_test)
 # print(x_train_scaled)
 # print(x_test_scaled)
 
-# Initialize the Sequential model
-model = Sequential()
 
-# Add the input layer and a hidden layer with 64 neurons and ReLU activation
-model.add(Dense(64, activation='relu', input_shape=(x_train_scaled.shape[1],)))
+# Convert the data to PyTorch tensors
+x_train_tensor = torch.tensor(x_train_scaled, dtype=torch.float32)
+x_test_tensor = torch.tensor(x_test_scaled, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
+y_test_tensor = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
 
-# print(x_train_scaled.shape[1])
+# Define the neural network model
+class NeuralNet(nn.Module):
+    def __init__(self):
+        super(NeuralNet, self).__init__()
+        self.fc1 = nn.Linear(x_train_tensor.shape[1], 64)  # Input layer
+        self.fc2 = nn.Linear(64, 64)                       # Hidden layer
+        self.fc3 = nn.Linear(64, 32)                       # Hidden layer
+        self.fc4 = nn.Linear(32, 1)                        # Output layer
 
-# Add another hidden layer with 32 neurons and ReLU activation
-model.add(Dense(32, activation='relu'))
-model.add(Dense(32, activation='relu'))
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = torch.relu(self.fc3(x))
+        x = self.fc4(x)
+        return x
 
-# Add the output layer (for regression, we use a single neuron without activation)
-model.add(Dense(1))
+# Initialize the model, loss function, and optimizer
+model = NeuralNet()
+criterion = nn.MSELoss()  # Mean Squared Error Loss for regression
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-
-try:
-    # Train the model
-    hello = model.fit(x_train_scaled, y_train, epochs=10, batch_size=32, validation_data=(x_test_scaled, y_test))
-
-    # Evaluate the model
-    test_loss, test_mae = model.evaluate(x_test_scaled, y_test)
-    print(f"Test Mean Absolute Error: {test_mae}")
-except Exception as e:
-    print(f"An error occurred: {e}")
-
-
-print("x_train_scaled shape:", x_train_scaled.shape)  # Should be (number of samples, number of features)
-print("y_train shape:", y_train.shape)                # Should be (number of samples,)
-print("x_test_scaled shape:", x_test_scaled.shape)    # Should be (number of samples, number of features)
-print("y_test shape:", y_test.shape)                  # Should be (number of samples,)
